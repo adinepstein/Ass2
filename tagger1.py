@@ -14,8 +14,9 @@ DIM_EMBEDDING= 50
 CONTEXT_SIZE = 5
 DIM_LAYER = 100
 LR = 0.01
-BATCH_SIZE= 300
+BATCH_SIZE= 100
 EPOCHS = 10
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class WindowTaggerModeler(nn.Module):
     def __init__(self,vocab_size,output_size, dim_embedding,context_size,dim_layer):
         super(WindowTaggerModeler,self).__init__()
@@ -24,7 +25,7 @@ class WindowTaggerModeler(nn.Module):
         self.linear2=nn.Linear(dim_layer,output_size,True)
 
     def forward(self,inputs):
-        embeds=self.embeddings(inputs).view((1,-1))
+        embeds=self.embeddings(inputs).view(1,-1)
         out=torch.tanh(self.linear1(embeds))
         out=self.linear2(out)
         probs= F.softmax(out,dim=1)
@@ -46,6 +47,10 @@ def main():
     vocab_size=len(index_to_word)
     target_size =len(index_to_label)
     model= WindowTaggerModeler(vocab_size,target_size,DIM_EMBEDDING,CONTEXT_SIZE,DIM_LAYER)
+    a= torch.cuda.device_count()
+    print(a)
+    model = nn.DataParallel(model)
+    model.to(device)
     optimizer = optim.SGD(model.parameters(),lr=LR)
     train_losses=[]
     train_accuracy = []
@@ -54,19 +59,25 @@ def main():
     for epoch in range(EPOCHS):
         random.shuffle(sequences)
         total_loss=0
-        for start in range(0,len(sequences),BATCH_SIZE):
-            batch= sequences[start:start+BATCH_SIZE]
-            for seq, label in batch:
-                seq_index= torch.tensor([word_to_index[s] for s in seq],dtype=torch.long)
+        for n, (seq, label) in enumerate(sequences):
+            seq_index= torch.tensor([word_to_index[s] for s in seq],dtype=torch.long)
+            label_index= torch.tensor([label_to_index[label]],dtype=torch.long)
+            if torch.cuda.is_available():
+                seq_index, label_index = seq_index.to(device), label_index.to(device)
+                # input_array[n,:len(seq_index)]=seq_index
+                # output_array[n]=label_index
+                # input_array, output_array = input_array.to(device), output_array.to(device)
+
+            probs = model(seq_index)
+            loss = loss_function(probs,label_index)
+            if n% BATCH_SIZE==0 and n>0:
                 model.zero_grad()
-                probs = model(seq_index)
-                loss = loss_function(probs,torch.tensor([label_to_index[label]],dtype=torch.long))
                 loss.backward()
                 optimizer.step()
-                print(loss.item())
-                total_loss+=loss.item()
-        train_losses.append(total_loss)
-        print(total_loss)
+
+        train_losses.append(loss.item())
+        print(loss.item())
+
 
 
 if __name__ == '__main__':

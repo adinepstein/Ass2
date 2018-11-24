@@ -58,3 +58,5 @@ def sentences_to_sequences(sentences,word_to_label):
             s = ([sentence[i-2],sentence[i-1],sentence[i],sentence[i+1],sentence[i+2]],word_to_label[sentence[i]])
             sequences.append(s)
     return sequences
+
+
