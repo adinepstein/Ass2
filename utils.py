@@ -36,6 +36,13 @@ def set_data_and_indexs(filename):
 
     return word_to_label, word_to_index,index_to_word,label_to_index,index_to_label
 
+def word_to_label_f(word,word_to_label):
+    if word in word_to_label:
+        return word_to_label[word]
+    else:
+        return 1
+
+
 def data_to_sentences(filename):
     all_sentences=[]
     with open(filename) as dataSource:
@@ -55,7 +62,7 @@ def sentences_to_sequences(sentences,word_to_label):
     sequences= []
     for sentence in sentences:
         for i in range(2,len(sentence)-2):
-            s = ([sentence[i-2],sentence[i-1],sentence[i],sentence[i+1],sentence[i+2]],word_to_label[sentence[i]])
+            s = ([sentence[i-2],sentence[i-1],sentence[i],sentence[i+1],sentence[i+2]],word_to_label_f(sentence[i],word_to_label))
             sequences.append(s)
     return sequences
 
