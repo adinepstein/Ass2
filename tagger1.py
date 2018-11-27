@@ -33,6 +33,7 @@ def set_data_and_indexs(filename):
         if label not in label_to_index:
             label_to_index[label]= len(label_to_index)
             index_to_label.append(label)
+
 def word_to_index_f(word):
     if word in word_to_index:
         return word_to_index[word]
@@ -45,7 +46,7 @@ def word_to_label_f(word):
     else:
         return index_to_label[1]
 
-def sentences_to_sequences(sentences,word_to_label):
+def sentences_to_sequences(sentences):
     sequences= []
     for sentence in sentences:
         for i in range(2,len(sentence)-2):
@@ -54,11 +55,12 @@ def sentences_to_sequences(sentences,word_to_label):
     return sequences
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 class WindowTaggerModeler(nn.Module):
-    def __init__(self,vocab_size,output_size, dim_embedding,context_size,dim_layer):
+    def __init__(self,vocab_size,output_size, dim_embedding,context_size,dim_layer,embedder):
         super(WindowTaggerModeler,self).__init__()
         self.train
-        self.embeddings=nn.Embedding(vocab_size,dim_embedding)
+        self.embeddings=embedder
         self.linear1=nn.Linear(context_size* dim_embedding,dim_layer,True)
         self.linear2=nn.Linear(dim_layer,output_size,True)
 
@@ -83,7 +85,7 @@ class WindowTaggerModeler(nn.Module):
 #     else:
 #         return 1
 
-def do_pass(data,word_to_index,label_to_index,index_to_label,model,optimizer,train,pos):
+def do_pass(data,model,optimizer,train,pos):
         loss = 0
         match = 0
         total = 0
@@ -126,15 +128,15 @@ def do_pass(data,word_to_index,label_to_index,index_to_label,model,optimizer,tra
         return loss/(len(data)/BATCH_SIZE), match/total
 
 
-def train_and_test_model(train_path,dev_path,test_path,model_dave_path,pos):
+def train_and_test_model(train_path,dev_path,test_path,model_save_path,embedder,pos):
     set_data_and_indexs(train_path)
     set_data_and_indexs(dev_path)
-    train_sequences = sentences_to_sequences(utils.data_to_sentences(train_path), word_to_label)
-    dev_sequences = sentences_to_sequences(utils.data_to_sentences(dev_path), word_to_label)
-    test_sequences = sentences_to_sequences(utils.data_to_sentences(test_path),word_to_label)
+    train_sequences = sentences_to_sequences(utils.data_to_sentences(train_path))
+    dev_sequences = sentences_to_sequences(utils.data_to_sentences(dev_path))
+    test_sequences = sentences_to_sequences(utils.data_to_sentences(test_path))
     vocab_size = len(index_to_word)
     target_size = len(index_to_label)
-    model = WindowTaggerModeler(vocab_size, target_size, DIM_EMBEDDING, CONTEXT_SIZE, DIM_LAYER)
+    model = WindowTaggerModeler(vocab_size, target_size, DIM_EMBEDDING, CONTEXT_SIZE, DIM_LAYER,embedder)
     if torch.cuda.is_available():
         model = nn.DataParallel(model)
     model.to(device)
@@ -143,21 +145,23 @@ def train_and_test_model(train_path,dev_path,test_path,model_dave_path,pos):
         random.shuffle(train_sequences)
         model.train()
         model.zero_grad()
-        train_loss, train_acc = do_pass(train_sequences, word_to_index, label_to_index,index_to_label, model, optimizer, True,pos)
+        train_loss, train_acc = do_pass(train_sequences, model, optimizer, True,pos)
         model.eval()
-        dev_loss, dev_acc = do_pass(dev_sequences, word_to_index, label_to_index,index_to_label, model, optimizer, False,pos)
+        dev_loss, dev_acc = do_pass(dev_sequences, model, optimizer, False,pos)
         print("{} - train loss {} train-accuracy {} dev loss {}  dev-accuracy {}".format(epoch, train_loss, train_acc,
                                                                                          dev_loss, dev_acc))
-        torch.save(model.state_dict(), model_dave_path)
+        torch.save(model.state_dict(), model_save_path)
         # # Load model
-        # model.load_state_dict(torch.load('tagger.pt.model'))
+        # model.load_state_dict(torch.load(model_save_path))
         #
         # # Evaluation pass.
-        # _, test_acc = do_pass(test_sequences, word_to_index, label_to_index,index_to_label, model,optimizer, False,pos)
+        # _, test_acc = do_pass(test_sequences, model,optimizer, False,pos)
         # print("Test Accuracy: {:.3f}".format(test_acc))
 
 def main():
-    train_and_test_model("C:\\DeepLearning\\ner\\train.txt","C:\\DeepLearning\\ner\\dev.txt","C:\\DeepLearning\\ner\\test.txt","model2_ner.pt",False)
+    vocab_size= len(word_to_index)
+    embedder = nn.Embedding(vocab_size, DIM_EMBEDDING)
+    train_and_test_model("C:\\DeepLearning\\ner\\train.txt","C:\\DeepLearning\\ner\\dev.txt","C:\\DeepLearning\\ner\\test.txt","model2_ner.pt",embedder,False)
 
 
 
