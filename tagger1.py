@@ -15,6 +15,44 @@ DIM_LAYER = 100
 LR = 0.04
 BATCH_SIZE= 30
 EPOCHS = 100
+
+word_to_index= {PAD:0,UNKOWN:1}
+index_to_word= [PAD, UNKOWN]
+label_to_index = {PAD:0}
+index_to_label = [PAD]
+word_to_label = {}
+
+def set_data_and_indexs(filename):
+
+    data= utils.read_data(filename)
+    for word , label in data:
+        word_to_label[word]=label
+        if word not in word_to_index:
+            word_to_index[word]=len(word_to_index)
+            index_to_word.append(word)
+        if label not in label_to_index:
+            label_to_index[label]= len(label_to_index)
+            index_to_label.append(label)
+def word_to_index_f(word):
+    if word in word_to_index:
+        return word_to_index[word]
+    else:
+        return 1
+
+def word_to_label_f(word):
+    if word in word_to_label:
+        return word_to_label[word]
+    else:
+        return index_to_label[1]
+
+def sentences_to_sequences(sentences,word_to_label):
+    sequences= []
+    for sentence in sentences:
+        for i in range(2,len(sentence)-2):
+            s = ([sentence[i-2],sentence[i-1],sentence[i],sentence[i+1],sentence[i+2]],word_to_label_f(sentence[i]))
+            sequences.append(s)
+    return sequences
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class WindowTaggerModeler(nn.Module):
     def __init__(self,vocab_size,output_size, dim_embedding,context_size,dim_layer):
@@ -38,16 +76,12 @@ class WindowTaggerModeler(nn.Module):
         return loss, predicted_tags
 
 
-def word_to_index_f(word,word_to_index):
-    if word in word_to_index:
-        return word_to_index[word]
-    else:
-        return 1
-def label_to_index_f(label,label_to_index):
-    if label in label_to_index:
-        return label_to_index[label]
-    else:
-        return 1
+
+# def label_to_index_f(label,label_to_index):
+#     if label in label_to_index:
+#         return label_to_index[label]
+#     else:
+#         return 1
 
 def do_pass(data,word_to_index,label_to_index,index_to_label,model,optimizer,train,pos):
         loss = 0
@@ -62,8 +96,8 @@ def do_pass(data,word_to_index,label_to_index,index_to_label,model,optimizer,tra
             input_array = torch.zeros((cur_batch_size, CONTEXT_SIZE)).long()
             output_array = torch.zeros((cur_batch_size, 1)).long()
             for n, (seq, label) in enumerate(batch):
-                seq_index = torch.tensor([word_to_index_f(s,word_to_index) for s in seq], dtype=torch.long)
-                label_index = torch.tensor(label_to_index_f(label,label_to_index), dtype=torch.long)
+                seq_index = torch.tensor([word_to_index_f(s) for s in seq], dtype=torch.long)
+                label_index = torch.tensor(label_to_index[label], dtype=torch.long)
                 input_array[n, :len(seq_index)] = seq_index
                 output_array[n] = label_index
             if torch.cuda.is_available():
@@ -78,7 +112,7 @@ def do_pass(data,word_to_index,label_to_index,index_to_label,model,optimizer,tra
             if pos:
                 for (_,g), a in zip(batch,predicted):
                     total+=1
-                    g_i=label_to_index_f(g,label_to_index)
+                    g_i=label_to_index[g]
                     if g_i==a:
                         match+=1
             else:
@@ -87,16 +121,17 @@ def do_pass(data,word_to_index,label_to_index,index_to_label,model,optimizer,tra
                         pass
                     else:
                         total += 1
-                        if label_to_index_f(g,label_to_index) == a:
+                        if label_to_index[g] == a:
                             match += 1
         return loss/(len(data)/BATCH_SIZE), match/total
 
 
 def train_and_test_model(train_path,dev_path,test_path,model_dave_path,pos):
-    word_to_label, word_to_index, index_to_word, label_to_index, index_to_label = utils.set_data_and_indexs(train_path)
-    train_sequences = utils.sentences_to_sequences(utils.data_to_sentences(train_path), word_to_label)
-    dev_sequences = utils.sentences_to_sequences(utils.data_to_sentences(dev_path), word_to_label)
-    test_sequences = utils.sentences_to_sequences(utils.data_to_sentences(test_path),word_to_label)
+    set_data_and_indexs(train_path)
+    set_data_and_indexs(dev_path)
+    train_sequences = sentences_to_sequences(utils.data_to_sentences(train_path), word_to_label)
+    dev_sequences = sentences_to_sequences(utils.data_to_sentences(dev_path), word_to_label)
+    test_sequences = sentences_to_sequences(utils.data_to_sentences(test_path),word_to_label)
     vocab_size = len(index_to_word)
     target_size = len(index_to_label)
     model = WindowTaggerModeler(vocab_size, target_size, DIM_EMBEDDING, CONTEXT_SIZE, DIM_LAYER)

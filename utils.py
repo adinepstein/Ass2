@@ -16,31 +16,27 @@ def read_data(filename):
                 data.append((word, label))
     return data
 
-def set_data_and_indexs(filename):
+# def set_data_and_indexs(filename):
+#
+#     data= read_data(filename)
+#     word_to_index= {PAD:0,UNKOWN:1}
+#     index_to_word= [PAD, UNKOWN]
+#     label_to_index = {PAD:0}
+#     index_to_label = [PAD]
+#     word_to_label = {}
+#
+#     for word , label in data:
+#         word_to_label[word]=label
+#         if word not in word_to_index:
+#             word_to_index[word]=len(word_to_index)
+#             index_to_word.append(word)
+#         if label not in label_to_index:
+#             label_to_index[label]= len(label_to_index)
+#             index_to_label.append(label)
+#
+#     return word_to_label, word_to_index,index_to_word,label_to_index,index_to_label
 
-    data= read_data(filename)
-    word_to_index= {PAD:0,UNKOWN:1}
-    index_to_word= [PAD, UNKOWN]
-    label_to_index = {PAD:0}
-    index_to_label = [PAD]
-    word_to_label = {}
 
-    for word , label in data:
-        word_to_label[word]=label
-        if word not in word_to_index:
-            word_to_index[word]=len(word_to_index)
-            index_to_word.append(word)
-        if label not in label_to_index:
-            label_to_index[label]= len(label_to_index)
-            index_to_label.append(label)
-
-    return word_to_label, word_to_index,index_to_word,label_to_index,index_to_label
-
-def word_to_label_f(word,word_to_label):
-    if word in word_to_label:
-        return word_to_label[word]
-    else:
-        return 1
 
 
 def data_to_sentences(filename):
@@ -58,12 +54,6 @@ def data_to_sentences(filename):
                 sentence=[PAD,PAD]
         return all_sentences
 
-def sentences_to_sequences(sentences,word_to_label):
-    sequences= []
-    for sentence in sentences:
-        for i in range(2,len(sentence)-2):
-            s = ([sentence[i-2],sentence[i-1],sentence[i],sentence[i+1],sentence[i+2]],word_to_label_f(sentence[i],word_to_label))
-            sequences.append(s)
-    return sequences
+
 
 
