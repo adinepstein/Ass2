@@ -1,0 +1,35 @@
+the 5 most similar words for word - dog:
+0: cat, 0.22907402308540836
+1: rabbit, 0.26803298464326175
+2: puppy, 0.3034127087520191
+3: frog, 0.35150589772277185
+4: kitten, 0.36510794691878146
+
+the 5 most similar words for word - england:
+0: ireland, 0.09905266617547304
+1: scotland, 0.1499226595799602
+2: australia, 0.19365906617265027
+3: wales, 0.2016522469223292
+4: europe, 0.22472461532162058
+
+the 5 most similar words for word - john:
+0: george, 0.07795155706831014
+1: robert, 0.10118382591144148
+2: charles, 0.10530771722208199
+3: william, 0.11055272477194977
+4: james, 0.12171410001916061
+
+the 5 most similar words for word - explode:
+0: grenadiers, 0.4445723318061314
+1: slashed, 0.44916076534927685
+2: appendix, 0.4660522020141534
+3: monnet, 0.4757815458019935
+4: instantaneously, 0.4817324117824143
+
+the 5 most similar words for word - office:
+0: board, 0.33183251076749887
+1: court, 0.38022641876923735
+2: offices, 0.3825628671514195
+3: commission, 0.3833242944287655
+4: authority, 0.3966798746075929
+
