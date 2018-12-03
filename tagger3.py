@@ -14,28 +14,34 @@ PAD ="__PAD__"
 UNKOWN = "__UNKOWN__"
 DIM_EMBEDDING= 50
 CONTEXT_SIZE = 5
-DIM_LAYER = 100
-LR = 0.04
-BATCH_SIZE= 30
-EPOCHS = 100
+DIM_LAYER = 130
+LR = 0.045
+BATCH_SIZE= 50
+EPOCHS = 35
 
 # choose what to clasify POS-True or NER-False
 POS=False
 # choose embedding vectors, pretranined- True or untrained- False
 PRETRAINED= True
+#choose if you want to train the model(True) or load the trained model and predict(False)
+TRAIN_MODEL=False
+# choose if adding prefix (True) or not(False)
+PREFIX_SUFFIX=True
 # file paths
-train_path="C:\\DeepLearning\\ner\\train.txt"
-dev_path="C:\\DeepLearning\\ner\\dev.txt"
-test_path ="C:\\DeepLearning\\ner\\test.txt"
+train_path="ner\\train.txt"
+dev_path="ner\\dev.txt"
+test_path ="ner\\test.txt"
 
 #pretrained embedding files
-word_path="C:\\DeepLearning\\pretrained\\vocab.txt"
-vectors_path="C:\\DeepLearning\\pretrained\\wordVectors.txt"
+word_path="vocab.txt"
+vectors_path="wordVectors.txt"
 
 
-save_model_path= "model1_ner.pt"
+save_model_path= "model12_ner.pt"
+prediction_results_path="test4.ner"
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+# adding the prefix and suffix to the vocabulary
 def add_prefix_suffix_to_word_index(word_to_index,index_to_word,word_to_label):
     temp_index_to_word=[]
     for word in index_to_word:
@@ -59,6 +65,10 @@ def main():
     label_to_index = {PAD: 0}
     index_to_label = [PAD]
     word_to_label = {}
+    train_loss_list = []
+    dev_loss_list = []
+    train_acc_list = []
+    dev_acc_list = []
     word_and_label_structures=[word_to_index,index_to_word,label_to_index,index_to_label,word_to_label]
     # upload train data
     word_to_index, index_to_word, label_to_index, index_to_label, word_to_label=utils.set_data_and_indexs(train_path, word_and_label_structures)
@@ -81,26 +91,10 @@ def main():
     if torch.cuda.is_available():
         model = nn.DataParallel(model)
     model.to(device)
-    optimizer = optim.SGD(model.parameters(), lr=LR)
-    for epoch in range(EPOCHS):
-        random.shuffle(train_sequences)
-        model.train()
-        model.zero_grad()
-        train_loss, train_acc = utils.run_single_epoch_with_prex_suffix(train_sequences, model, optimizer,BATCH_SIZE,CONTEXT_SIZE,word_to_index,label_to_index,index_to_label, True, POS)
-        model.eval()
-        dev_loss, dev_acc = utils.run_single_epoch_with_prex_suffix(dev_sequences, model, optimizer,BATCH_SIZE,CONTEXT_SIZE,word_to_index,label_to_index,index_to_label, False, POS)
-        print("{} - train loss {} train-accuracy {} dev loss {}  dev-accuracy {}".format(epoch, train_loss, train_acc,
-                                                                                         dev_loss, dev_acc))
-    torch.save(model.state_dict(), save_model_path)
-    # # Load model
-    # model.load_state_dict(torch.load(model_save_path))
-    #
-    # # Evaluation pass.
-    # _, test_acc = utils.run_single_epoch_with_prex_suffix(test_sequences, model,optimizer,optimizer,BATCH_SIZE,CONTEXT_SIZE,word_to_index,label_to_index,index_to_label, False,POS)
-    # print("Test Accuracy: {:.3f}".format(test_acc))
-
-
-
+    if TRAIN_MODEL:
+        utils.train_model(model,train_sequences,dev_sequences,word_to_index,label_to_index,index_to_label,EPOCHS,LR,POS,BATCH_SIZE,CONTEXT_SIZE,DIM_LAYER,save_model_path,PREFIX_SUFFIX)
+    else:
+        utils.predict_test(test_sequences,model,len(test_sequences),CONTEXT_SIZE,word_to_index,index_to_label,save_model_path,prediction_results_path,PREFIX_SUFFIX)
 
 if __name__ == '__main__':
     main()

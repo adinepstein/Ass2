@@ -14,23 +14,30 @@ UNKOWN = "__UNKOWN__"
 DIM_EMBEDDING= 50
 CONTEXT_SIZE = 5
 DIM_LAYER = 100
-LR = 0.04
-BATCH_SIZE= 30
-EPOCHS = 100
+LR = 0.01
+BATCH_SIZE= 10
+EPOCHS = 40
 
 # choose what to clasify POS-True or NER-False
-POS=False
-# file paths
-train_path="C:\\DeepLearning\\ner\\train.txt"
-dev_path="C:\\DeepLearning\\ner\\dev.txt"
-test_path ="C:\\DeepLearning\\ner\\test.txt"
+POS=True
+#choose if you want to train the model(True) or load the trained model and predict(False)
+TRAIN_MODEL=False
+#choose if adding prefix and suffix(True) or not (False)
+PREFIX_SUFFIX=False
+
+# data paths
+train_path="pos\\train.txt"
+dev_path="pos\\dev.txt"
+test_path ="pos\\test.txt"
 
 #pretrained embedding files
-word_path="C:\\DeepLearning\\pretrained\\vocab.txt"
-vectors_path="C:\\DeepLearning\\pretrained\\wordVectors.txt"
+word_path="vocab.txt"
+vectors_path="wordVectors.txt"
 
+#model and results file path
+save_model_path= "model2_3.pt"
+prediction_results_path="test3.pos"
 
-save_model_path= "model1_ner.pt"
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
@@ -53,12 +60,15 @@ def set_pretrained_list(pretained_dic,index_to_word):
             pretrained_emnedding_list.append(random_vector)
     return pretrained_emnedding_list
 
+
+
 def main():
     word_to_index = {PAD: 0, UNKOWN: 1}
     index_to_word = [PAD, UNKOWN]
     label_to_index = {PAD: 0}
     index_to_label = [PAD]
     word_to_label = {}
+
     word_and_label_structures = [word_to_index, index_to_word, label_to_index, index_to_label, word_to_label]
     # upload train data
     word_to_index, index_to_word, label_to_index, index_to_label, word_to_label = utils.set_data_and_indexs(train_path,
@@ -76,19 +86,11 @@ def main():
     if torch.cuda.is_available():
         model = nn.DataParallel(model)
     model.to(device)
-    optimizer = optim.SGD(model.parameters(), lr=LR)
-    for epoch in range(EPOCHS):
-        random.shuffle(train_sequences)
-        model.train()
-        model.zero_grad()
-        train_loss, train_acc = utils.run_single_epoch(train_sequences, model, optimizer, BATCH_SIZE, CONTEXT_SIZE,
-                                                       word_to_index, label_to_index, index_to_label, True, POS)
-        model.eval()
-        dev_loss, dev_acc = utils.run_single_epoch(dev_sequences, model, optimizer, BATCH_SIZE, CONTEXT_SIZE,
-                                                   word_to_index, label_to_index, index_to_label, False, POS)
-        print("{} - train loss {} train-accuracy {} dev loss {}  dev-accuracy {}".format(epoch, train_loss, train_acc,
-                                                                                         dev_loss, dev_acc))
-    torch.save(model.state_dict(), save_model_path)
+    if TRAIN_MODEL:
+        utils.train_model(model,train_sequences,dev_sequences,word_to_index,label_to_index,index_to_label,EPOCHS,LR,POS,BATCH_SIZE,CONTEXT_SIZE,DIM_LAYER,save_model_path,PREFIX_SUFFIX)
+    else:
+        utils.predict_test(test_sequences,model,len(test_sequences),CONTEXT_SIZE,word_to_index,index_to_label,save_model_path,prediction_results_path,PREFIX_SUFFIX)
+
     # # Load model
     # model.load_state_dict(torch.load(model_save_path))
     #

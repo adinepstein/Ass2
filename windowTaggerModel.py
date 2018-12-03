@@ -37,6 +37,7 @@ class WindowTaggerModeler(nn.Module):
 
         return loss, predicted_tags
 
+    # gets the ebmedding vectors of the prefix, suffix and the word and sums them up
     def set_sum_embeds(self,inputs):
         prefix= inputs[:,0,:]
         sequence=inputs[:,1,:]
